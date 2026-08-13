@@ -5,10 +5,11 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
@@ -23,25 +24,42 @@ jobs:
           cmake -S . -B cmake-build-release -G "Visual Studio 17 2022" -A x64
           cmake --build cmake-build-release --config Release
 
-      - name: Copy proxy DLL
+      - name: Copy proxy DLL to expected location
         shell: powershell
         run: |
           $dll = Get-ChildItem "tools\asar-fuses-bypass\cmake-build-release" -Filter version.dll -Recurse | Select-Object -First 1
+
           if (-not $dll) {
             throw "version.dll was not produced"
           }
-          Copy-Item $dll.FullName "tools\asar-fuses-bypass\cmake-build-release\version.dll" -Force
+
+          Write-Host "Found version.dll at: $($dll.FullName)"
+
+          Copy-Item `
+            $dll.FullName `
+            "tools\asar-fuses-bypass\cmake-build-release\version.dll" `
+            -Force
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Build Wand Enhancer
-        run: msbuild Wemod-Patcher.sln /p:Configuration=Release /p:RestorePackagesConfig=true
+        shell: cmd
+        run: |
+          msbuild Wemod-Patcher.sln /p:Configuration=Release /p:Platform="Any CPU" /p:RestorePackagesConfig=true
+
+      - name: Show build output
+        shell: powershell
+        run: |
+          Get-ChildItem -Path . -Include *.exe,*.dll -Recurse |
+            Where-Object { $_.FullName -match "\\bin\\Release\\" } |
+            Select-Object FullName
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
           name: Wand-Enhancer-v1.0.6.0
           path: |
-            **/bin/Release/*.exe
-            **/bin/Release/*.dll
+            WeModPatcher/bin/Release/**
+            AsarSharp/bin/Release/**
+          if-no-files-found: error
