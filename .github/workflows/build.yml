@@ -10,20 +10,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
 
-      - name: Restore
-        run: dotnet restore Wemod-Patcher.sln
+      - name: Restore NuGet packages
+        run: nuget restore Wemod-Patcher.sln
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
       - name: Build
-        run: dotnet build Wemod-Patcher.sln --configuration Release --no-restore
+        run: msbuild Wemod-Patcher.sln /p:Configuration=Release /p:RestorePackagesConfig=true
 
-      - name: Upload build
+      - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
           name: Wand-Enhancer-v1.0.6.0
           path: |
-            **/bin/Release/**
+            **/bin/Release/*.exe
+            **/bin/Release/*.dll
