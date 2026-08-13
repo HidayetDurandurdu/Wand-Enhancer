@@ -9,6 +9,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
@@ -16,10 +18,22 @@ jobs:
       - name: Restore NuGet packages
         run: nuget restore Wemod-Patcher.sln
 
+      - name: Build proxy DLL
+        shell: cmd
+        run: |
+          cd tools\asar-fuses-bypass
+          cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+          cmake --build cmake-build-release --config Release
+
+      - name: Find version.dll
+        shell: powershell
+        run: |
+          Get-ChildItem -Path tools\asar-fuses-bypass -Filter version.dll -Recurse
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build
+      - name: Build Wand Enhancer
         run: msbuild Wemod-Patcher.sln /p:Configuration=Release /p:RestorePackagesConfig=true
 
       - name: Upload executable
